@@ -314,12 +314,6 @@ def initialize_session_state():
         st.session_state.chatbot = None
     if 'uploaded_files' not in st.session_state:
         st.session_state.uploaded_files = []
-
-    # Load API key from Streamlit secrets cache if available.
-    secrets_api_key = st.secrets.get("GEMINI_API_KEY", "") if hasattr(st, "secrets") else ""
-    if secrets_api_key and not st.session_state.gemini_key:
-        st.session_state.gemini_key = secrets_api_key
-        st.session_state.chatbot = DatasetChatBot(secrets_api_key)
     if 'page' not in st.session_state:
         st.session_state.page = "🏠 Home"
     if 'adv_image' not in st.session_state:
@@ -327,6 +321,17 @@ def initialize_session_state():
 
 
 initialize_session_state()
+
+
+# Safe Gemini initialization from Streamlit secrets
+try:
+    API_KEY = st.secrets.get("GEMINI_API_KEY", "") if hasattr(st, "secrets") else ""
+    if API_KEY:
+        import google.generativeai as genai
+        genai.configure(api_key=API_KEY)
+except Exception as e:
+    # Streamlit should still start even if Gemini is unavailable.
+    st.warning(f"Gemini AI could not initialize: {str(e)}")
 
 
 # ==================== UTILITY FUNCTIONS ====================
@@ -556,11 +561,19 @@ def main():
         
         if api_key and api_key != st.session_state.gemini_key:
             st.session_state.gemini_key = api_key
-            st.session_state.chatbot = DatasetChatBot(api_key)
-            st.success("✅ API Key configured!")
+            try:
+                st.session_state.chatbot = DatasetChatBot(api_key)
+                st.success("✅ API Key configured!")
+            except Exception as e:
+                st.session_state.chatbot = None
+                st.error(f"❌ Failed to configure Gemini chatbot: {str(e)}")
 
         if st.session_state.gemini_key and st.session_state.chatbot is None:
-            st.session_state.chatbot = DatasetChatBot(st.session_state.gemini_key)
+            try:
+                st.session_state.chatbot = DatasetChatBot(st.session_state.gemini_key)
+            except Exception as e:
+                st.session_state.chatbot = None
+                st.error(f"❌ Failed to initialize Gemini chatbot: {str(e)}")
 
         st.markdown("---")
         st.markdown("### ℹ️ About")

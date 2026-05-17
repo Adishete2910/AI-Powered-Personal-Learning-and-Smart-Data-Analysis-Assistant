@@ -3,7 +3,6 @@ Chatbot Module for Smart Data Analyst Agent
 This module handles AI-powered conversations about datasets using Google Gemini API.
 """
 
-import google.generativeai as genai
 import pandas as pd
 from typing import Optional, List, Dict
 
@@ -36,13 +35,14 @@ class DatasetChatBot:
             return True
 
         try:
+            import google.generativeai as genai
             genai.configure(api_key=self.api_key)
             self.model = genai.GenerativeModel('gemini-pro')
             self.api_configured = True
             return True
         except Exception as e:
             self.api_configured = False
-            self.error_message = str(e)
+            self.error_message = f"Gemini initialization failed: {str(e)}"
             return False
     
     def prepare_dataset_context(self, df: pd.DataFrame, max_rows: int = 5) -> str:

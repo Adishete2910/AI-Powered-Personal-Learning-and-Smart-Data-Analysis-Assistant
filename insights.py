@@ -6,7 +6,6 @@ This module generates insights and recommendations from datasets.
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Tuple
-import streamlit as st
 
 
 class InsightGenerator:
