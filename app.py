@@ -24,7 +24,12 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-import pdfplumber
+try:
+    import pdfplumber
+    PDFPLUMBER_AVAILABLE = True
+except ImportError:
+    pdfplumber = None
+    PDFPLUMBER_AVAILABLE = False
 
 # Import custom modules
 from data_cleaning import (
@@ -309,6 +314,12 @@ def initialize_session_state():
         st.session_state.chatbot = None
     if 'uploaded_files' not in st.session_state:
         st.session_state.uploaded_files = []
+
+    # Load API key from Streamlit secrets cache if available.
+    secrets_api_key = st.secrets.get("GEMINI_API_KEY", "") if hasattr(st, "secrets") else ""
+    if secrets_api_key and not st.session_state.gemini_key:
+        st.session_state.gemini_key = secrets_api_key
+        st.session_state.chatbot = DatasetChatBot(secrets_api_key)
     if 'page' not in st.session_state:
         st.session_state.page = "🏠 Home"
     if 'adv_image' not in st.session_state:
@@ -324,6 +335,13 @@ def load_pdf_dataset(uploaded_file) -> pd.DataFrame:
     """
     Load tabular data from a PDF file.
     """
+    if not PDFPLUMBER_AVAILABLE:
+        st.error(
+            "❌ PDF import is currently unavailable because the required library is not installed. "
+            "Please upload a CSV or Excel file instead."
+        )
+        return None
+
     try:
         file_bytes = uploaded_file.read()
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
@@ -540,7 +558,10 @@ def main():
             st.session_state.gemini_key = api_key
             st.session_state.chatbot = DatasetChatBot(api_key)
             st.success("✅ API Key configured!")
-        
+
+        if st.session_state.gemini_key and st.session_state.chatbot is None:
+            st.session_state.chatbot = DatasetChatBot(st.session_state.gemini_key)
+
         st.markdown("---")
         st.markdown("### ℹ️ About")
         st.info(
@@ -578,29 +599,20 @@ def main():
         """, unsafe_allow_html=True)
         
         st.markdown("""
-        # Gallery using Streamlit image components so uploaded images render reliably
-        col_g1, col_g2, col_g3 = st.columns(3)
-
-        default1 = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1000&q=80'
-        default2 = 'https://images.unsplash.com/photo-1525378960530-7c0da6231fb1?auto=format&fit=crop&w=1000&q=80'
-        default3 = 'https://images.unsplash.com/photo-1551924540-1ba343ebc7fe?auto=format&fit=crop&w=1000&q=80'
-
-        with col_g1:
-            st.image(default1, caption='Modern dashboards designed to inspire action and delight business users.', use_column_width=True)
-
-        with col_g2:
-            # Prefer user-uploaded advantage image for Team Collaboration if provided
-            if st.session_state.adv_image:
-                st.image(st.session_state.adv_image, caption='Beautiful visuals for every team, from analysts to executives.', use_column_width=True)
-            else:
-                st.image(default2, caption='Beautiful visuals for every team, from analysts to executives.', use_column_width=True)
-
-        with col_g3:
-            # Prefer user-uploaded advantage image for AI Insights if provided
-            if st.session_state.adv_image:
-                st.image(st.session_state.adv_image, caption='AI-powered insights that help you discover trends instantly.', use_column_width=True)
-            else:
-                st.image(default3, caption='AI-powered insights that help you discover trends instantly.', use_column_width=True)
+        <div class='gallery-grid'>
+            <div class='gallery-card'>
+                <img src='https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1000&q=80' alt='Data Strategy'>
+                <div class='caption'>Modern dashboards designed to inspire action and delight business users.</div>
+            </div>
+            <div class='gallery-card'>
+                <img src='https://images.unsplash.com/photo-1525378960530-7c0da6231fb1?auto=format&fit=crop&w=1000&q=80' alt='Team Collaboration'>
+                <div class='caption'>Beautiful visuals for every team, from analysts to executives.</div>
+            </div>
+            <div class='gallery-card'>
+                <img src='https://images.unsplash.com/photo-1551924540-1ba343ebc7fe?auto=format&fit=crop&w=1000&q=80' alt='AI Insights'>
+                <div class='caption'>AI-powered insights that help you discover trends instantly.</div>
+            </div>
+        </div>
 
         <hr style='margin-top:1.5rem;margin-bottom:1.5rem;border:none;border-top:1px solid rgba(255,255,255,0.08)'>
 

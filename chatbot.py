@@ -6,7 +6,6 @@ This module handles AI-powered conversations about datasets using Google Gemini 
 import google.generativeai as genai
 import pandas as pd
 from typing import Optional, List, Dict
-import streamlit as st
 
 
 class DatasetChatBot:
@@ -14,20 +13,37 @@ class DatasetChatBot:
     AI-powered chatbot for dataset analysis using Google Gemini API.
     """
     
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: Optional[str] = None):
         """
-        Initialize the chatbot with API key.
+        Initialize the chatbot with an optional API key.
+        The Gemini model is created lazily when the user interacts with the AI.
         
         Args:
-            api_key (str): Google Gemini API key
+            api_key (Optional[str]): Google Gemini API key
         """
+        self.api_key = api_key
+        self.model = None
+        self.api_configured = bool(api_key)
+        self.error_message = ""
+
+    def _ensure_model(self) -> bool:
+        if not self.api_key:
+            self.error_message = "No Google Gemini API key configured."
+            self.api_configured = False
+            return False
+
+        if self.model is not None:
+            return True
+
         try:
-            genai.configure(api_key=api_key)
+            genai.configure(api_key=self.api_key)
             self.model = genai.GenerativeModel('gemini-pro')
             self.api_configured = True
+            return True
         except Exception as e:
             self.api_configured = False
             self.error_message = str(e)
+            return False
     
     def prepare_dataset_context(self, df: pd.DataFrame, max_rows: int = 5) -> str:
         """
@@ -69,8 +85,8 @@ First {min(max_rows, len(df))} rows:
         Returns:
             str: AI-generated response
         """
-        if not self.api_configured:
-            return f"Error: API not configured. {self.error_message}"
+        if not self._ensure_model():
+            return f"Error: {self.error_message}"
         
         try:
             # Build conversation with context
@@ -134,8 +150,8 @@ Please answer the following question based on the dataset context provided:""")
         Returns:
             str: AI-generated summary
         """
-        if not self.api_configured:
-            return "Error: API not configured"
+        if not self._ensure_model():
+            return f"Error: {self.error_message}"
         
         try:
             context = self.prepare_dataset_context(df)
@@ -167,8 +183,8 @@ Please provide a professional analysis suitable for a data analyst."""
         Returns:
             str: AI analysis of data issues
         """
-        if not self.api_configured:
-            return "Error: API not configured"
+        if not self._ensure_model():
+            return f"Error: {self.error_message}"
         
         try:
             context = self.prepare_dataset_context(df)
@@ -202,8 +218,8 @@ Provide a professional assessment."""
         Returns:
             str: AI-generated insights
         """
-        if not self.api_configured:
-            return "Error: API not configured"
+        if not self._ensure_model():
+            return f"Error: {self.error_message}"
         
         try:
             context = self.prepare_dataset_context(df)
