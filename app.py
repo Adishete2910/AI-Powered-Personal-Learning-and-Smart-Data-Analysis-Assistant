@@ -15,6 +15,8 @@ Author: AI Assistant
 Date: 2024
 """
 
+import csv
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -58,29 +60,32 @@ st.set_page_config(
 st.markdown("""
 <style>
     :root {
-        --bg-start: #0b1546;
-        --bg-mid: #1f3da6;
-        --bg-end: #e9f0ff;
+        --bg-start: #09112f;
+        --bg-mid: #14276f;
+        --bg-end: #e7f0ff;
         --accent: #ff5c8a;
         --accent-alt: #20d0ff;
         --accent-soft: #7a8cff;
-        --card-bg: rgba(255, 255, 255, 0.94);
+        --card-bg: rgba(255, 255, 255, 0.88);
         --card-glow: rgba(255, 92, 138, 0.16);
         --text-dark: #0f172a;
         --text-light: #f8fafc;
     }
 
     body, .main, .stApp, [data-testid="stAppViewContainer"] {
-        background: radial-gradient(circle at top left, rgba(255, 92, 138, 0.25), transparent 25%),
-                    radial-gradient(circle at bottom right, rgba(32, 208, 255, 0.20), transparent 22%),
-                    linear-gradient(180deg, var(--bg-start) 0%, var(--bg-mid) 45%, var(--bg-end) 100%);
+        background: radial-gradient(circle at top left, rgba(255, 92, 138, 0.24), transparent 26%),
+                    radial-gradient(circle at bottom right, rgba(32, 208, 255, 0.24), transparent 20%),
+                    linear-gradient(180deg, var(--bg-start) 0%, var(--bg-mid) 45%, rgba(231, 240, 255, 0.96) 100%);
         color: var(--text-dark);
+        font-family: 'Inter', sans-serif;
+        overflow-x: hidden;
     }
 
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0c1c55 0%, #2b4baa 100%) !important;
+        background: linear-gradient(180deg, #09142e 0%, #1d4492 100%) !important;
         color: var(--text-light);
         border-right: 1px solid rgba(255,255,255,0.12);
+        padding-top: 1.2rem;
     }
 
     [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3, [data-testid="stSidebar"] h4,
@@ -88,60 +93,141 @@ st.markdown("""
         color: #f8fafc !important;
     }
 
-    .header-title {
-        color: #ffffff;
-        font-size: 3rem;
-        font-weight: 900;
-        margin-bottom: 0.75rem;
-        letter-spacing: -0.05em;
-        text-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+    .sidebar-brand {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 1.75rem;
+        padding: 1rem 1rem 1.2rem;
+        border-radius: 1.8rem;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
     }
 
-    .hero-card, .gallery-card, .stDataFrame, .stTable {
+    .sidebar-brand .brand-mark {
+        width: 58px;
+        height: 58px;
+        display: grid;
+        place-items: center;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #ff5c8a, #20d0ff);
+        color: #ffffff;
+        font-weight: 800;
+        font-size: 1.1rem;
+    }
+
+    .sidebar-brand h2 {
+        margin: 0;
+        font-size: 1.2rem;
+        line-height: 1.2;
+        color: #ffffff;
+    }
+
+    .sidebar-brand p {
+        margin: 0.35rem 0 0;
+        color: rgba(255,255,255,0.78);
+        font-size: 0.95rem;
+    }
+
+    .sidebar-card {
+        background: rgba(255,255,255,0.08);
+        border-radius: 1.4rem;
+        padding: 1rem 1rem 1.1rem;
+        margin-bottom: 1rem;
+        border: 1px solid rgba(255,255,255,0.10);
+    }
+
+    .sidebar-card-title {
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 0.45rem;
+        font-size: 1rem;
+    }
+
+    .sidebar-footer {
+        padding: 1rem;
+        border-radius: 1.5rem;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.10);
+        color: rgba(255,255,255,0.78);
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+
+    .page-header {
+        padding: 1.75rem 1.75rem 1.5rem;
+        margin-bottom: 1.5rem;
+        border-radius: 2rem;
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(255, 92, 138, 0.16);
+        box-shadow: 0 22px 60px rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(18px);
+    }
+
+    .page-header h1 {
+        margin-top: 0;
+        font-size: 2.8rem;
+        line-height: 1.05;
+        letter-spacing: -0.05em;
+        color: #081341;
+    }
+
+    .page-header p {
+        margin: 1rem 0 0;
+        font-size: 1rem;
+        color: #334155;
+        line-height: 1.75;
+    }
+
+    .hero-card, .gallery-card, .stDataFrame, .stTable, .stAlert, .stMetric {
         background: var(--card-bg) !important;
         border-radius: 1.8rem !important;
-        border: 1px solid rgba(255, 255, 255, 0.24) !important;
-        box-shadow: 0 30px 60px rgba(15, 23, 42, 0.12) !important;
+        border: 1px solid rgba(255, 255, 255, 0.30) !important;
+        box-shadow: 0 30px 60px rgba(15, 23, 42, 0.10) !important;
+        backdrop-filter: blur(14px);
     }
 
     .hero-card {
-        background: linear-gradient(135deg, rgba(255, 92, 138, 0.92), rgba(32, 208, 255, 0.86)) !important;
+        background: linear-gradient(135deg, rgba(255, 92, 138, 0.95), rgba(32, 208, 255, 0.92)) !important;
         color: #ffffff;
-        padding: 2.5rem;
+        padding: 2rem;
         border-radius: 2rem;
         margin-bottom: 1.75rem;
     }
 
-    .hero-card h1 {
+    .hero-card h2 {
         margin: 0;
-        font-size: 2.75rem;
+        font-size: 2.4rem;
         line-height: 1.05;
+        font-weight: 800;
     }
 
     .hero-card p {
         color: rgba(255,255,255,0.92);
-        font-size: 1.1rem;
+        font-size: 1.05rem;
         line-height: 1.8;
         margin: 1rem 0 1.25rem;
     }
 
-    .hero-badges {
+    .hero-card .hero-badges {
         display: flex;
         flex-wrap: wrap;
         gap: 0.85rem;
+        margin-top: 1rem;
     }
 
-    .hero-badges span {
-        background: rgba(255,255,255,0.20);
-        padding: 0.75rem 1.1rem;
+    .hero-card .hero-badges span {
+        background: rgba(255,255,255,0.18);
+        padding: 0.7rem 1.1rem;
         border-radius: 999px;
         font-size: 0.95rem;
         color: #ffffff;
-        border: 1px solid rgba(255,255,255,0.24);
+        border: 1px solid rgba(255,255,255,0.22);
     }
 
     .hero-banner {
-        background-image: linear-gradient(135deg, rgba(255, 92, 138, 0.8), rgba(32, 208, 255, 0.8)),
+        background-image: linear-gradient(135deg, rgba(255, 92, 138, 0.80), rgba(32, 208, 255, 0.80)),
                           url('https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1400&q=80');
         background-size: cover;
         background-position: center;
@@ -156,7 +242,7 @@ st.markdown("""
         content: '';
         position: absolute;
         inset: 0;
-        background: linear-gradient(180deg, rgba(17, 24, 39, 0.15), rgba(17, 24, 39, 0.45));
+        background: linear-gradient(180deg, rgba(17, 24, 39, 0.20), rgba(17, 24, 39, 0.52));
     }
 
     .hero-banner-content {
@@ -208,7 +294,7 @@ st.markdown("""
         width: 100%;
         display: block;
         object-fit: cover;
-        height: 240px;
+        height: 220px;
     }
 
     .gallery-card .caption {
@@ -219,7 +305,7 @@ st.markdown("""
 
     .feature-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         gap: 1rem;
         margin-top: 1.5rem;
     }
@@ -244,29 +330,11 @@ st.markdown("""
         line-height: 1.7;
     }
 
-    .section-header {
-        color: #081341;
-        font-size: 1.8rem;
-        font-weight: 800;
-        margin-top: 2.25rem;
-        margin-bottom: 1rem;
-        border-bottom: 3px solid rgba(255, 92, 138, 0.35);
-        padding-bottom: 0.6rem;
-    }
-
-    [data-testid="metric-container"] {
-        background-color: rgba(255,255,255,0.96);
-        padding: 1rem 1rem 1.2rem;
-        border-radius: 1.4rem;
-        border: 1px solid rgba(255, 92, 138, 0.15);
-        box-shadow: 0 18px 50px rgba(255, 92, 138, 0.08);
-    }
-
     .stButton>button, .stDownloadButton>button {
         border-radius: 999px !important;
         border: none !important;
         box-shadow: 0 16px 40px rgba(255, 92, 138, 0.18) !important;
-        transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+        transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
         background: linear-gradient(135deg, #ff5c8a, #20d0ff) !important;
         color: #ffffff !important;
     }
@@ -278,21 +346,53 @@ st.markdown("""
 
     .stTextInput>div>input, .stSelectbox>div>div>div>div, .stTextArea>div>textarea {
         border-radius: 1rem;
-        border: 1px solid rgba(255, 92, 138, 0.12) !important;
+        border: 1px solid rgba(255, 92, 138, 0.16) !important;
+        background: rgba(255,255,255,0.96) !important;
     }
 
     .stFileUploader {
         border-radius: 1.5rem !important;
         border: 1px solid rgba(255, 92, 138, 0.18) !important;
-        background: rgba(255,255,255,0.9) !important;
+        background: rgba(255,255,255,0.95) !important;
+        padding: 0.9rem !important;
     }
 
     .stRadio>label, .stCheckbox>label {
-        color: #0f172a !important;
+        color: #f8fafc !important;
     }
 
     .stTextInput>label, .stTextArea>label, .stSelectbox>label {
-        color: #0f172a !important;
+        color: #f8fafc !important;
+    }
+
+    .stTabs [role="tablist"] button {
+        border-radius: 999px !important;
+    }
+
+    .stAlert {
+        border-radius: 1.4rem !important;
+    }
+
+    .stMetric {
+        border-radius: 1.4rem !important;
+    }
+
+    @media (max-width: 900px) {
+        .hero-card, .section-card, .sidebar-brand, .sidebar-card {
+            border-radius: 1.4rem;
+        }
+
+        .hero-card h2 {
+            font-size: 2rem;
+        }
+
+        .hero-banner {
+            min-height: 260px;
+        }
+
+        .gallery-grid, .feature-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -321,6 +421,81 @@ def initialize_session_state():
 
 
 initialize_session_state()
+
+
+def render_sidebar():
+    """Render the premium sidebar with branding, navigation, and API configuration."""
+    with st.sidebar:
+        st.markdown(
+            """
+            <div class='sidebar-brand'>
+                <div class='brand-mark'>AI</div>
+                <div>
+                    <h2>AnyList AI Analyst</h2>
+                    <p>Premium AI data workspace for powerful analytics.</p>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        page = st.radio(
+            "Navigate to",
+            [
+                "🏠 Home",
+                "📤 Upload Data",
+                "🔍 Data Overview",
+                "🧹 Data Cleaning",
+                "📈 Visualizations",
+                "🤖 AI Chatbot",
+                "💡 Insights & Recommendations",
+                "⚙️ Settings"
+            ],
+            key='page'
+        )
+
+        st.markdown("<div class='sidebar-card'><p class='sidebar-card-title'>Secure API Key</p><p>Store your Gemini API key safely in session state.</p></div>", unsafe_allow_html=True)
+        api_key = st.text_input(
+            "Google Gemini API Key:",
+            value=st.session_state.gemini_key,
+            type="password",
+            help="Get your API key from https://makersuite.google.com/"
+        )
+
+        if api_key and api_key != st.session_state.gemini_key:
+            st.session_state.gemini_key = api_key
+            try:
+                st.session_state.chatbot = DatasetChatBot(api_key)
+                st.success("✅ API Key configured!")
+            except Exception as e:
+                st.session_state.chatbot = None
+                st.error(f"❌ Failed to configure Gemini chatbot: {str(e)}")
+
+        if st.session_state.gemini_key and st.session_state.chatbot is None:
+            try:
+                st.session_state.chatbot = DatasetChatBot(st.session_state.gemini_key)
+            except Exception as e:
+                st.session_state.chatbot = None
+                st.error(f"❌ Failed to initialize Gemini chatbot: {str(e)}")
+
+        st.markdown("""
+            <div class='sidebar-card'>
+                <p class='sidebar-card-title'>Project</p>
+                <p>Visual analytics, AI chat, clean data exports, and smart insights all in one dashboard.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown("""
+            <div class='sidebar-footer'>
+                <strong>Need help?</strong> Use the AI Chatbot section to ask questions about your dataset.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    return page
 
 
 # Safe Gemini initialization from Streamlit secrets
@@ -531,183 +706,102 @@ def generate_report(df: pd.DataFrame, insights_gen: InsightGenerator) -> str:
 
 def main():
     """Main application function."""
-    
-    # Sidebar Navigation
-    with st.sidebar:
-        st.markdown("## 📊 Navigation")
-        page = st.radio(
-            "Select a Section:",
-            [
-                "🏠 Home",
-                "📤 Upload Data",
-                "🔍 Data Overview",
-                "🧹 Data Cleaning",
-                "📈 Visualizations",
-                "🤖 AI Chatbot",
-                "💡 Insights & Recommendations",
-                "⚙️ Settings"
-            ],
-            key='page'
-        )
-        
-        st.markdown("---")
-        st.markdown("### 🔑 API Configuration")
-        api_key = st.text_input(
-            "Google Gemini API Key:",
-            value=st.session_state.gemini_key,
-            type="password",
-            help="Get your API key from https://makersuite.google.com/"
-        )
-        
-        if api_key and api_key != st.session_state.gemini_key:
-            st.session_state.gemini_key = api_key
-            try:
-                st.session_state.chatbot = DatasetChatBot(api_key)
-                st.success("✅ API Key configured!")
-            except Exception as e:
-                st.session_state.chatbot = None
-                st.error(f"❌ Failed to configure Gemini chatbot: {str(e)}")
+    page = render_sidebar()
 
-        if st.session_state.gemini_key and st.session_state.chatbot is None:
-            try:
-                st.session_state.chatbot = DatasetChatBot(st.session_state.gemini_key)
-            except Exception as e:
-                st.session_state.chatbot = None
-                st.error(f"❌ Failed to initialize Gemini chatbot: {str(e)}")
-
-        st.markdown("---")
-        st.markdown("### ℹ️ About")
-        st.info(
-            "**Smart Data Analyst Agent**\n\n"
-            "An AI-powered tool for data analysis, visualization, and insights.\n\n"
-            "Features:\n"
-            "• Data Upload & Preview\n"
-            "• Automated Cleaning\n"
-            "• Statistical Analysis\n"
-            "• Interactive Visualizations\n"
-            "• AI-Powered Chat\n"
-            "• Export Reports"
-        )
-    
     # ==================== PAGE: HOME ====================
     if page == "🏠 Home":
-        st.markdown("<div class='header-title'>📊 Smart Data Analyst Agent</div>", 
-                   unsafe_allow_html=True)
-        
-        st.markdown("""
-        <div class='hero-banner'>
-            <div class='hero-banner-content'>
-                <h2>Stunning analytics made simple and beautiful.</h2>
-                <p>Capture attention with visual storytelling, explore data instantly, and let AI deliver smarter decisions for your team.</p>
-                <div class='hero-buttons'>
-                    <a href='#' style='text-decoration:none;'>
-                        <button class='css-1emrehy e16nr0p30'>Start Upload</button>
-                    </a>
-                    <a href='#' style='text-decoration:none;'>
-                        <button class='css-1emrehy e16nr0p30' style='background-color: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.36);'>Explore Visuals</button>
-                    </a>
+        st.markdown(
+            "<div class='page-header'><h1>AI-Powered Data Analyst Studio</h1><p>Modern analytics, clean data preparation, and intelligent recommendations in a premium dashboard experience.</p></div>",
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            """
+            <div class='hero-card'>
+                <h2>Build a stunning analytics workspace for your datasets.</h2>
+                <p>Upload, explore, clean, and ask your data questions with style. Designed for teams that want a polished AI-first experience at every step.</p>
+                <div class='hero-badges'>
+                    <span>Smart uploads</span>
+                    <span>Interactive charts</span>
+                    <span>AI recommendations</span>
+                    <span>Modern dashboards</span>
                 </div>
             </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown("""
-        <div class='gallery-grid'>
-            <div class='gallery-card'>
-                <img src='https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1000&q=80' alt='Data Strategy'>
-                <div class='caption'>Modern dashboards designed to inspire action and delight business users.</div>
-            </div>
-            <div class='gallery-card'>
-                <img src='https://images.unsplash.com/photo-1525378960530-7c0da6231fb1?auto=format&fit=crop&w=1000&q=80' alt='Team Collaboration'>
-                <div class='caption'>Beautiful visuals for every team, from analysts to executives.</div>
-            </div>
-            <div class='gallery-card'>
-                <img src='https://images.unsplash.com/photo-1551924540-1ba343ebc7fe?auto=format&fit=crop&w=1000&q=80' alt='AI Insights'>
-                <div class='caption'>AI-powered insights that help you discover trends instantly.</div>
-            </div>
-        </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        <hr style='margin-top:1.5rem;margin-bottom:1.5rem;border:none;border-top:1px solid rgba(255,255,255,0.08)'>
-
-        """, unsafe_allow_html=True)
-
-        # Advantages section with image upload/display
-        st.markdown("<div class='section-header'>✅ Advantages</div>", unsafe_allow_html=True)
-        colA, colB = st.columns([2, 1])
-        with colA:
-            st.markdown("""
-            - 🚀 Fast multi-format upload (CSV / Excel / PDF)
-            - 🧹 Automatic cleaning: remove duplicates, handle missing values
-            - 📊 Interactive visualizations with Plotly
-            - 🤖 AI chatbot for natural-language analysis
-            - 📥 Export cleaned datasets and full reports
-            """)
-        with colB:
-            st.markdown("### Upload image to show here")
-            adv_img = st.file_uploader("Upload an image to represent Advantages:", type=["png", "jpg", "jpeg"], key='adv_img')
-            if adv_img is not None:
-                st.session_state.adv_image = adv_img.read()
-                st.success("✅ Image uploaded for Advantages")
-
-            if st.session_state.adv_image:
-                st.image(st.session_state.adv_image, use_column_width=True, caption="Advantages image")
-            else:
-                st.image('https://images.unsplash.com/photo-1559526324-593bc073d938?auto=format&fit=crop&w=800&q=80', use_column_width=True, caption='Advantages (default)')
-        
-        col1, col2 = st.columns([3, 1])
+        col1, col2 = st.columns([3, 1], gap="large")
         with col1:
-            st.markdown("""
-            Welcome to the **Smart Data Analyst Agent** — your polished AI assistant for smarter data decisions.
-            
-            ### 🚀 Get Started
-            
-            1. **Upload Your Data** - Start with CSV or Excel files.
-            2. **Explore** - Review dataset statistics and structure.
-            3. **Clean** - Remove duplicates and handle missing values.
-            4. **Visualize** - Build interactive charts and dashboards.
-            5. **Analyze** - Ask AI questions and generate recommendations.
-            6. **Export** - Save cleaned datasets and reports.
-            
-            Here are some core capabilities of the app:
-            """)
-            st.markdown("""
-            <div class='feature-grid'>
-                <div class='feature-card'>
-                    <h4>Fast Upload</h4>
-                    <p>Import CSV and Excel data with multi-file support.</p>
+            st.markdown("<div class='section-card'><h3>✨ What this app delivers</h3><p>Every feature is built to feel premium: from dataset onboarding and cleaning to insights, visual storytelling, and conversational AI support.</p></div>", unsafe_allow_html=True)
+            st.markdown(
+                """
+                <div class='feature-grid'>
+                    <div class='feature-card'>
+                        <h4>Fast Upload</h4>
+                        <p>Import CSV, Excel, or PDF datasets quickly with drag-and-drop style UI.</p>
+                    </div>
+                    <div class='feature-card'>
+                        <h4>Clean Data</h4>
+                        <p>Remove duplicates, handle missing values, and normalize with a few clicks.</p>
+                    </div>
+                    <div class='feature-card'>
+                        <h4>Smart Insights</h4>
+                        <p>Use AI-generated recommendations and quality scores to improve your data.</p>
+                    </div>
+                    <div class='feature-card'>
+                        <h4>Visual Dashboards</h4>
+                        <p>Explore charts, correlation maps, and pair plots that make trends obvious.</p>
+                    </div>
                 </div>
-                <div class='feature-card'>
-                    <h4>Smart Cleaning</h4>
-                    <p>Remove duplicates, fill missing values, and normalize numeric columns.</p>
-                </div>
-                <div class='feature-card'>
-                    <h4>AI Insights</h4>
-                    <p>Generate dataset summaries, detect issues, and get smart recommendations.</p>
-                </div>
-                <div class='feature-card'>
-                    <h4>Interactive Visuals</h4>
-                    <p>Use Plotly charts for exploration with a smooth, modern interface.</p>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        
+                """,
+                unsafe_allow_html=True,
+            )
         with col2:
-            st.markdown("### 📌 Quick Stats")
-            st.metric("Version", "1.0")
-            st.metric("Features", "7+")
-            st.metric("Languages", "Python")
+            st.markdown("<div class='section-card'><h3>📌 Quick Actions</h3><p>Navigate the workflow with quick action buttons and launch the features you need faster.</p></div>", unsafe_allow_html=True)
+            if st.session_state.df is not None:
+                st.metric("Rows", f"{st.session_state.df.shape[0]:,}")
+                st.metric("Columns", f"{st.session_state.df.shape[1]:,}")
+                st.metric("Loaded Files", f"{len(st.session_state.uploaded_files)}")
+            else:
+                st.metric("Rows", "--")
+                st.metric("Columns", "--")
+                st.metric("Loaded Files", "0")
             st.markdown("---")
-            if st.button("🚀 Start with Upload Data"):
+            if st.button("🚀 Start Upload"):
                 st.session_state.page = "📤 Upload Data"
                 st.experimental_rerun()
-            if st.button("📈 Explore Visualizations"):
+            if st.button("📈 Explore Visuals"):
                 st.session_state.page = "📈 Visualizations"
                 st.experimental_rerun()
+
+        st.markdown("<div class='section-header'>✅ Why users love it</div>", unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div class='gallery-grid'>
+                <div class='gallery-card'>
+                    <img src='https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1000&q=80' alt='Data Strategy'>
+                    <div class='caption'>Beautiful dashboards that look premium and feel effortless.</div>
+                </div>
+                <div class='gallery-card'>
+                    <img src='https://images.unsplash.com/photo-1525378960530-7c0da6231fb1?auto=format&fit=crop&w=1000&q=80' alt='Team Collaboration'>
+                    <div class='caption'>Designed for collaboration, insight sharing, and executive storytelling.</div>
+                </div>
+                <div class='gallery-card'>
+                    <img src='https://images.unsplash.com/photo-1551924540-1ba343ebc7fe?auto=format&fit=crop&w=1000&q=80' alt='AI Insights'>
+                    <div class='caption'>AI-powered insights make your dataset feel faster and smarter.</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     
     # ==================== PAGE: UPLOAD DATA ====================
     elif page == "📤 Upload Data":
-        st.markdown("<div class='section-header'>📤 Upload Dataset</div>", 
-                   unsafe_allow_html=True)
+        st.markdown(
+            "<div class='page-header'><h1>📤 Upload Dataset</h1><p>Easily import CSV, Excel, or PDF datasets and start your analytics workflow in seconds.</p></div>",
+            unsafe_allow_html=True,
+        )
         
         st.info(
             "💡 **Tip**: You can upload CSV, Excel, or PDF files. "
@@ -720,7 +814,9 @@ def main():
             accept_multiple_files=True,
             help="Upload CSV, Excel, or PDF files"
         )
-        
+        uploaded_files = st.session_state.uploaded_files + [f.name for f in uploaded_files if f.name not in st.session_state.uploaded_files]
+        # choose one file of them
+        # uploaded_files will be added to session state, and only the last one will be loaded as the current dataset.
         if uploaded_files:
             for uploaded_file in uploaded_files:
                 df = load_dataset(uploaded_file)
@@ -746,8 +842,10 @@ def main():
         
         df = st.session_state.df
         
-        st.markdown("<div class='section-header'>🔍 Data Overview</div>", 
-                   unsafe_allow_html=True)
+        st.markdown(
+            "<div class='page-header'><h1>🔍 Data Overview</h1><p>Explore your dataset with interactive summaries, quality metrics, and easy-to-read previews.</p></div>",
+            unsafe_allow_html=True,
+        )
         
         # Display basic statistics
         col1, col2, col3, col4 = st.columns(4)
@@ -811,8 +909,10 @@ def main():
         
         df = st.session_state.df
         
-        st.markdown("<div class='section-header'>🧹 Data Cleaning & Preprocessing</div>", 
-                   unsafe_allow_html=True)
+        st.markdown(
+            "<div class='page-header'><h1>🧹 Data Cleaning & Preprocessing</h1><p>Clean and normalize your dataset with powerful controls and instant preview feedback.</p></div>",
+            unsafe_allow_html=True,
+        )
         
         col1, col2 = st.columns(2)
         
@@ -910,8 +1010,10 @@ def main():
         
         df = st.session_state.df
         
-        st.markdown("<div class='section-header'>📈 Interactive Visualizations</div>", 
-                   unsafe_allow_html=True)
+        st.markdown(
+            "<div class='page-header'><h1>📈 Interactive Visualizations</h1><p>Create modern, responsive charts and explore trends with intuitive visual controls.</p></div>",
+            unsafe_allow_html=True,
+        )
         st.info("Select a chart type below, then choose the fields to render the graph immediately.")
         
         viz_type = st.selectbox(
@@ -1066,8 +1168,10 @@ def main():
             )
             return
         
-        st.markdown("<div class='section-header'>🤖 AI Data Chatbot</div>", 
-                   unsafe_allow_html=True)
+        st.markdown(
+            "<div class='page-header'><h1>🤖 AI Data Chatbot</h1><p>Chat with your data in a clean conversational interface and get fast answers from AI.</p></div>",
+            unsafe_allow_html=True,
+        )
         
         df = st.session_state.df
         chatbot = st.session_state.chatbot
@@ -1145,8 +1249,10 @@ def main():
         df = st.session_state.df
         insights_gen = InsightGenerator()
         
-        st.markdown("<div class='section-header'>💡 Insights & Recommendations</div>", 
-                   unsafe_allow_html=True)
+        st.markdown(
+            "<div class='page-header'><h1>💡 Insights & Recommendations</h1><p>Receive smart analysis, correlation highlights, and data improvement suggestions.</p></div>",
+            unsafe_allow_html=True,
+        )
         
         tab1, tab2, tab3, tab4, tab5 = st.tabs(
             ["📊 Overview", "🔗 Correlations", "📉 Distribution", "🎯 Outliers", "📋 Report"]
@@ -1268,8 +1374,10 @@ def main():
     
     # ==================== PAGE: SETTINGS ====================
     elif page == "⚙️ Settings":
-        st.markdown("<div class='section-header'>⚙️ Settings & Configuration</div>", 
-                   unsafe_allow_html=True)
+        st.markdown(
+            "<div class='page-header'><h1>⚙️ Settings & Configuration</h1><p>Tune your analytics experience, manage datasets, and control AI options in one place.</p></div>",
+            unsafe_allow_html=True,
+        )
         
         col1, col2 = st.columns(2)
         
